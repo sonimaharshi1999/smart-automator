@@ -1,0 +1,31 @@
+# SmartAutomator Platform Configuration: GitHub
+# GitHub has full REST + GraphQL APIs. Prefer API over UI.
+
+name: github
+display_name: GitHub
+base_url: https://github.com
+has_api: true
+api_base_url: https://api.github.com
+api_version: "2022-11-28"
+preferred_strategy: api
+
+rate_limit:
+  requests_per_minute: 30
+  burst_limit: 10
+  cooldown_seconds: 60
+
+auth:
+  method: token
+  token_env_var: GITHUB_TOKEN
+
+selectors_hint:
+  new_issue_button: '[aria-label="New issue"]'
+  issue_title: '#issue_form_title'
+  issue_body: '#issue_form_body'
+  submit_button: 'button[type="submit"]'
+  search_input: '[aria-label="Search or jump to"]'
+
+notes: >
+  GitHub has excellent API coverage. Almost all actions can be done
+  via API, which is faster and more reliable than UI automation.
+  Use GITHUB_TOKEN environment variable for authentication.

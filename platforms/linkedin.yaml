@@ -1,0 +1,30 @@
+# SmartAutomator Platform Configuration: LinkedIn
+# LinkedIn has no public API for posting. UI-only automation.
+
+name: linkedin
+display_name: LinkedIn
+base_url: https://www.linkedin.com
+has_api: false
+preferred_strategy: ui
+
+rate_limit:
+  requests_per_minute: 10
+  burst_limit: 3
+  cooldown_seconds: 120
+
+auth:
+  method: session
+  login_url: https://www.linkedin.com/login
+  credentials_env_prefix: LINKEDIN
+
+selectors_hint:
+  post_button: '[aria-label="Start a post"]'
+  text_editor: '[role="textbox"][aria-label="Text editor"]'
+  share_button: 'button.share-actions__primary-action'
+  home_feed: '[aria-label="Main Feed"]'
+  profile_menu: '[aria-label="Me"]'
+
+notes: >
+  LinkedIn aggressively detects automation. Use humanizer with
+  slow delays (2-5s between actions). Avoid posting more than
+  3 times per hour. Login requires email + password.

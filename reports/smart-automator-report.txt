@@ -1,0 +1,134 @@
+======================================================================
+  SmartAutomator - Adaptive API/UI Automation Framework
+======================================================================
+
+Author: Maharshi Soni
+Category: qa-ai-automation
+Difficulty: advanced
+
+----------------------------------------------------------------------
+DESCRIPTION
+----------------------------------------------------------------------
+Intelligent automation framework that auto-selects between API calls and UI automation. Three script generation modes: prompt-based, screenshot-based, and recording-enhanced. No POM — AI dynamically generates resilient label-based XPath selectors. Includes humanizer layer and self-healing on selector failure.
+
+----------------------------------------------------------------------
+TECH STACK
+----------------------------------------------------------------------
+  - playwright
+  - httpx
+  - pydantic
+  - click
+  - rich
+  - pillow
+  - pyyaml
+  - jinja2
+  - pytest
+
+----------------------------------------------------------------------
+FEATURES
+----------------------------------------------------------------------
+  * API/UI hybrid strategy selector
+  * Prompt-to-script generation
+  * Screenshot-to-selector generation
+  * Recording enhancement with AI
+  * Self-healing selectors
+  * Humanizer (Bezier mouse, Gaussian delays, realistic typing)
+  * Cron scheduler
+  * Platform registry with YAML configs
+
+----------------------------------------------------------------------
+SAMPLE INPUT
+----------------------------------------------------------------------
+  Natural language automation request
+
+  Example:
+    smart-automator run --workflow linkedin_post.yaml --content 'Excited about my new project'
+
+----------------------------------------------------------------------
+SAMPLE OUTPUT
+----------------------------------------------------------------------
+  Automation execution results
+
+  Example:
+    Strategy: UI (no API available) | Generated 5 action steps | Executed in 12.3s | Status: SUCCESS
+
+----------------------------------------------------------------------
+PROJECT STRUCTURE
+----------------------------------------------------------------------
+  .gitignore
+  LICENSE
+  project-idea.json
+  pyproject.toml
+  README.md
+  .github/workflows/test.yml
+  platforms/custom_template.yaml
+  platforms/github.yaml
+  platforms/instagram.yaml
+  platforms/linkedin.yaml
+  src/smart_automator/cli.py
+  src/smart_automator/config.py
+  src/smart_automator/models.py
+  src/smart_automator/__init__.py
+  src/smart_automator/api_executor/base.py
+  src/smart_automator/api_executor/github_api.py
+  src/smart_automator/api_executor/mock_instagram_api.py
+  src/smart_automator/api_executor/__init__.py
+  src/smart_automator/generators/prompt_generator.py
+  src/smart_automator/generators/recording_enhancer.py
+  src/smart_automator/generators/screenshot_generator.py
+  src/smart_automator/generators/__init__.py
+  src/smart_automator/healing/fallback.py
+  src/smart_automator/healing/retry.py
+  src/smart_automator/healing/__init__.py
+  src/smart_automator/humanizer/delays.py
+  src/smart_automator/humanizer/mouse.py
+  src/smart_automator/humanizer/scroll.py
+  src/smart_automator/humanizer/typing.py
+  src/smart_automator/humanizer/__init__.py
+  src/smart_automator/llm/api_provider.py
+  src/smart_automator/llm/base.py
+  src/smart_automator/llm/claude_cli.py
+  src/smart_automator/llm/__init__.py
+  src/smart_automator/scheduler/cron_scheduler.py
+  src/smart_automator/scheduler/__init__.py
+  src/smart_automator/strategy/platform_registry.py
+  src/smart_automator/strategy/selector.py
+  src/smart_automator/strategy/__init__.py
+  src/smart_automator/ui_executor/action_runner.py
+  src/smart_automator/ui_executor/browser.py
+  src/smart_automator/ui_executor/screenshot_analyzer.py
+  src/smart_automator/ui_executor/selector_engine.py
+  src/smart_automator/ui_executor/__init__.py
+  src/smart_automator.egg-info/dependency_links.txt
+  src/smart_automator.egg-info/entry_points.txt
+  src/smart_automator.egg-info/PKG-INFO
+  src/smart_automator.egg-info/requires.txt
+  src/smart_automator.egg-info/SOURCES.txt
+  src/smart_automator.egg-info/top_level.txt
+  tests/conftest.py
+  tests/test_action_runner.py
+  tests/test_cli.py
+  tests/test_config.py
+  tests/test_generators.py
+  tests/test_healing.py
+  tests/test_humanizer.py
+  tests/test_models.py
+  tests/test_scheduler.py
+  tests/test_selector_engine.py
+  tests/test_strategy.py
+  tests/__init__.py
+  workflows/github_issue.yaml
+  workflows/linkedin_post.yaml
+  workflows/multi_platform.yaml
+
+----------------------------------------------------------------------
+TEST RESULTS
+----------------------------------------------------------------------
+  Status: PARTIAL
+  Tests Run: 101
+  Passed: 100
+  Failed: 1
+
+======================================================================
+  Author: Maharshi Soni  |  License: MIT
+======================================================================

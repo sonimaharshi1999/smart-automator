@@ -1,0 +1,63 @@
+# SmartAutomator Workflow: Multi-Platform Post
+# Combines API + UI across platforms
+
+name: multi_platform_post
+description: Post content to LinkedIn (UI) and create a GitHub discussion (API)
+
+variables:
+  content: "Sharing my latest project update!"
+  github_owner: "MaharshiSoni"
+  github_repo: "smart-automator"
+
+steps:
+  # Step 1: Create GitHub issue (API - fast and reliable)
+  - action: api_call
+    platform: github
+    params:
+      method: POST
+      endpoint: "/repos/${github_owner}/${github_repo}/issues"
+      body:
+        title: "Cross-post: ${content}"
+        body: "Auto-posted from SmartAutomator multi-platform workflow."
+        labels: "cross-post"
+    on_failure: skip  # Continue even if GitHub fails
+
+  # Step 2: Post to LinkedIn (UI - requires browser)
+  - action: login
+    platform: linkedin
+    params:
+      email_env: LINKEDIN_EMAIL
+      password_env: LINKEDIN_PASSWORD
+    on_failure: stop
+
+  - action: navigate
+    platform: linkedin
+    params:
+      url: https://www.linkedin.com/feed/
+    on_failure: stop
+
+  - action: click
+    platform: linkedin
+    params:
+      selector: '[aria-label="Start a post"]'
+      wait_after_ms: 2000
+    on_failure: retry
+    max_retries: 3
+
+  - action: type
+    platform: linkedin
+    params:
+      selector: '[role="textbox"]'
+      value: "${content}"
+      humanizer: true
+    on_failure: retry
+    max_retries: 2
+
+  - action: click
+    platform: linkedin
+    params:
+      selector: 'button:has-text("Post")'
+      wait_after_ms: 3000
+    on_failure: stop
+
+schedule: "0 10 * * 1"  # Every Monday at 10 AM

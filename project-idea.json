@@ -1,0 +1,12 @@
+{
+  "project_name": "smart-automator",
+  "title": "SmartAutomator - Adaptive API/UI Automation Framework",
+  "category": "qa-ai-automation",
+  "difficulty": "advanced",
+  "description": "Intelligent automation framework that auto-selects between API calls and UI automation. Three script generation modes: prompt-based, screenshot-based, and recording-enhanced. No POM — AI dynamically generates resilient label-based XPath selectors. Includes humanizer layer and self-healing on selector failure.",
+  "tech_stack": ["playwright", "httpx", "pydantic", "click", "rich", "pillow", "pyyaml", "jinja2", "pytest"],
+  "features": ["API/UI hybrid strategy selector", "Prompt-to-script generation", "Screenshot-to-selector generation", "Recording enhancement with AI", "Self-healing selectors", "Humanizer (Bezier mouse, Gaussian delays, realistic typing)", "Cron scheduler", "Platform registry with YAML configs"],
+  "test_status": "PASSED",
+  "sample_input": {"description": "Natural language automation request", "example": "smart-automator run --workflow linkedin_post.yaml --content 'Excited about my new project'"},
+  "sample_output": {"description": "Automation execution results", "example": "Strategy: UI (no API available) | Generated 5 action steps | Executed in 12.3s | Status: SUCCESS"}
+}

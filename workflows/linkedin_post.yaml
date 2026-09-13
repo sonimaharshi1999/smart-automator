@@ -1,0 +1,49 @@
+# SmartAutomator Workflow: Post Content to LinkedIn
+# Uses UI automation (LinkedIn has no public posting API)
+
+name: linkedin_post
+description: Post content to LinkedIn feed
+
+variables:
+  content: "Hello from SmartAutomator!"
+  visibility: "public"
+
+steps:
+  - action: login
+    platform: linkedin
+    params:
+      email_env: LINKEDIN_EMAIL
+      password_env: LINKEDIN_PASSWORD
+    on_failure: stop
+
+  - action: navigate
+    platform: linkedin
+    params:
+      url: https://www.linkedin.com/feed/
+    on_failure: stop
+
+  - action: click
+    platform: linkedin
+    params:
+      selector: '[aria-label="Start a post"]'
+      wait_after_ms: 2000
+    on_failure: retry
+    max_retries: 3
+
+  - action: type
+    platform: linkedin
+    params:
+      selector: '[role="textbox"]'
+      value: "${content}"
+      humanizer: true
+    on_failure: retry
+    max_retries: 2
+
+  - action: click
+    platform: linkedin
+    params:
+      selector: 'button:has-text("Post")'
+      wait_after_ms: 3000
+    on_failure: stop
+
+schedule: "0 9 * * 1-5"  # Weekdays at 9 AM

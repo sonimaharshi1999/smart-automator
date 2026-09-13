@@ -1,0 +1,27 @@
+# SmartAutomator Workflow: Create GitHub Issue
+# Uses API strategy (GitHub has full REST API)
+
+name: github_create_issue
+description: Create a new issue in a GitHub repository
+
+variables:
+  owner: "MaharshiSoni"
+  repo: "smart-automator"
+  title: "Automated Issue Report"
+  body: "This issue was created by SmartAutomator."
+  labels: "automation,bot"
+
+steps:
+  - action: api_call
+    platform: github
+    params:
+      method: POST
+      endpoint: "/repos/${owner}/${repo}/issues"
+      body:
+        title: "${title}"
+        body: "${body}"
+        labels: "${labels}"
+    on_failure: retry
+    max_retries: 2
+
+schedule: null  # On-demand only

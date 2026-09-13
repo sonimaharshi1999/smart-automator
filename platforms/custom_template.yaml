@@ -1,0 +1,36 @@
+# SmartAutomator Platform Configuration Template
+# Copy this file and customize for your target platform.
+
+name: my_platform
+display_name: My Platform
+base_url: https://example.com
+
+# Set to true if the platform has a REST/GraphQL API
+has_api: false
+# api_base_url: https://api.example.com
+# api_version: v1
+
+# Strategy: api (prefer API), ui (prefer browser), hybrid (mixed)
+preferred_strategy: ui
+
+rate_limit:
+  requests_per_minute: 30
+  burst_limit: 5
+  cooldown_seconds: 60
+
+auth:
+  method: session  # token | oauth | cookie | session
+  login_url: https://example.com/login
+  credentials_env_prefix: MY_PLATFORM
+  # token_env_var: MY_PLATFORM_TOKEN
+
+# Known stable selectors for common elements on this platform
+# These give the AI hints for better selector generation
+selectors_hint:
+  login_email: '[name="email"]'
+  login_password: '[name="password"]'
+  login_submit: 'button[type="submit"]'
+
+notes: >
+  Add any platform-specific notes here: rate limits, anti-bot
+  detection, authentication quirks, known selector patterns.

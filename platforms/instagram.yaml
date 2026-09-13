@@ -1,0 +1,30 @@
+# SmartAutomator Platform Configuration: Instagram
+# Instagram has Graph API for business accounts.
+
+name: instagram
+display_name: Instagram
+base_url: https://www.instagram.com
+has_api: true
+api_base_url: https://graph.instagram.com
+api_version: v18.0
+preferred_strategy: api
+
+rate_limit:
+  requests_per_minute: 200
+  burst_limit: 25
+  cooldown_seconds: 300
+
+auth:
+  method: oauth
+  token_env_var: INSTAGRAM_TOKEN
+  login_url: https://www.instagram.com/accounts/login/
+
+selectors_hint:
+  new_post_button: '[aria-label="New post"]'
+  caption_input: '[aria-label="Write a caption..."]'
+  share_button: 'button:has-text("Share")'
+
+notes: >
+  Instagram Graph API requires a business account and Facebook
+  app approval. For personal accounts, UI automation is the only
+  option. Heavy anti-bot detection on the web interface.
