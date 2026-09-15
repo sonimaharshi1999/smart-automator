@@ -18,8 +18,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 screenshots/
-*.png
-*.jpg
+recordings/
 !platforms/*.yaml
 !workflows/*.yaml
 .DS_Store

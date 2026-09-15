@@ -216,6 +216,201 @@ def schedule(ctx: click.Context) -> None:
 
 
 @cli.command()
+@click.argument("instruction")
+@click.option("--mode", "-m", type=click.Choice(["guide", "do", "ask"]),
+              default="ask", help="Assistant mode: guide (explain only), do (act), ask (confirm first)")
+@click.option("--voice/--no-voice", default=True, help="Enable voice input/output")
+@click.option("--overlay/--no-overlay", default=True, help="Enable visual pointer overlay")
+@click.option("--tts", type=click.Choice(["pyttsx3", "system", "elevenlabs"]),
+              default="pyttsx3", help="Text-to-speech backend")
+@click.option("--whisper-model", default="base", help="Whisper model size (tiny/base/small/medium/large)")
+@click.pass_context
+def assist(
+    ctx: click.Context,
+    instruction: str,
+    mode: str,
+    voice: bool,
+    overlay: bool,
+    tts: str,
+    whisper_model: str,
+) -> None:
+    """Run a single AI-assisted command with screen awareness.
+
+    Example: smart-automator assist "Open Chrome and go to LinkedIn" --mode do
+    """
+    from smart_automator.assistant.brain import AssistantBrain, AssistantMode
+    from smart_automator.llm.claude_cli import ClaudeCLIProvider
+
+    llm = ClaudeCLIProvider()
+    if not llm.is_available():
+        console.print("[red]Claude CLI not found.[/red]")
+        return
+
+    mode_map = {"guide": AssistantMode.GUIDE, "do": AssistantMode.DO, "ask": AssistantMode.ASK}
+    brain = AssistantBrain(llm, mode=mode_map[mode])
+
+    console.print(Panel(
+        f"[bold blue]SmartAutomator Assistant[/bold blue] v{__version__}\n"
+        f"Mode: [green]{mode}[/green] | Voice: {'on' if voice else 'off'} | Overlay: {'on' if overlay else 'off'}",
+        title="AI Assistant",
+    ))
+
+    # Capture screenshot for context
+    screenshot_path = None
+    try:
+        from smart_automator.vision.screen_capture import ScreenCapture
+        capture = ScreenCapture()
+        frame = capture.capture_once()
+        screenshot_path = str(capture.save_screenshot(frame, "assist_context.png"))
+        console.print("[dim]Screen captured for context.[/dim]")
+    except Exception:
+        console.print("[yellow]Screen capture unavailable, proceeding without visual context.[/yellow]")
+
+    with console.status("AI is analyzing..."):
+        response = brain.process(instruction, screenshot_path)
+
+    console.print(f"\n[bold]Assistant ({response.mode_used.value}):[/bold]")
+    console.print(response.speech_text)
+
+    if response.pointers:
+        console.print("\n[bold cyan]Visual Pointers:[/bold cyan]")
+        for ptr in response.pointers:
+            console.print(f"  -> ({ptr.get('x')}, {ptr.get('y')}): {ptr.get('label', '')}")
+
+        if overlay:
+            try:
+                from smart_automator.vision.overlay import VisualOverlay
+                ov = VisualOverlay()
+                ov.start()
+                for ptr in response.pointers:
+                    ov.point_at(ptr.get("x", 0), ptr.get("y", 0), ptr.get("label", ""), 3.0)
+                import time
+                time.sleep(4)
+                ov.stop()
+            except Exception:
+                pass
+
+    if response.actions:
+        from rich.table import Table as RichTable
+        table = RichTable(title="Planned Actions")
+        table.add_column("#", style="dim")
+        table.add_column("Type", style="cyan")
+        table.add_column("Target", style="green")
+        table.add_column("Description", style="yellow")
+        for i, act in enumerate(response.actions, 1):
+            target = f"({act.get('x', '-')}, {act.get('y', '-')})" if act.get('x') else act.get('text', '-')
+            table.add_row(str(i), act.get("type", ""), target[:40], act.get("description", "")[:40])
+        console.print(table)
+
+        if response.needs_confirmation:
+            if click.confirm("Execute these actions?"):
+                _execute_desktop_actions(response.actions)
+            else:
+                console.print("[dim]Actions cancelled.[/dim]")
+        elif mode == "do":
+            _execute_desktop_actions(response.actions)
+
+    if response.follow_up:
+        console.print(f"\n[dim]Next: {response.follow_up}[/dim]")
+
+    if voice:
+        try:
+            from smart_automator.voice.speaker import VoiceSpeaker, TTSBackend
+            backend_map = {"pyttsx3": TTSBackend.PYTTSX3, "system": TTSBackend.SYSTEM, "elevenlabs": TTSBackend.ELEVENLABS}
+            speaker = VoiceSpeaker(backend=backend_map[tts])
+            if speaker.is_available():
+                speaker.speak(response.speech_text)
+        except Exception:
+            pass
+
+
+@cli.command()
+@click.option("--mode", "-m", type=click.Choice(["guide", "do", "ask"]),
+              default="ask", help="Assistant mode")
+@click.option("--voice/--no-voice", default=True, help="Enable voice I/O")
+@click.option("--overlay/--no-overlay", default=True, help="Enable visual overlay")
+@click.pass_context
+def listen(ctx: click.Context, mode: str, voice: bool, overlay: bool) -> None:
+    """Start interactive voice assistant loop (push-to-talk).
+
+    Example: smart-automator listen --mode do
+    """
+    from smart_automator.assistant.brain import AssistantMode
+    from smart_automator.assistant.session import InteractiveSession, SessionConfig, SessionState
+    from smart_automator.llm.claude_cli import ClaudeCLIProvider
+    from smart_automator.voice.speaker import TTSBackend
+
+    llm = ClaudeCLIProvider()
+    if not llm.is_available():
+        console.print("[red]Claude CLI not found.[/red]")
+        return
+
+    mode_map = {"guide": AssistantMode.GUIDE, "do": AssistantMode.DO, "ask": AssistantMode.ASK}
+    config = SessionConfig(
+        mode=mode_map[mode],
+        overlay_enabled=overlay,
+        voice_enabled=voice,
+    )
+
+    console.print(Panel(
+        f"[bold blue]SmartAutomator Voice Assistant[/bold blue]\n"
+        f"Mode: [green]{mode}[/green] | Speak and I'll respond.\n"
+        f"Press Ctrl+C to stop.",
+        title="Interactive Mode",
+    ))
+
+    def on_state(state: SessionState) -> None:
+        icons = {
+            SessionState.IDLE: "[dim]Idle[/dim]",
+            SessionState.LISTENING: "[yellow]Listening...[/yellow]",
+            SessionState.THINKING: "[blue]Thinking...[/blue]",
+            SessionState.SPEAKING: "[green]Speaking...[/green]",
+            SessionState.ACTING: "[red]Acting...[/red]",
+            SessionState.CONFIRMING: "[yellow]Awaiting confirmation...[/yellow]",
+        }
+        console.print(f"  State: {icons.get(state, str(state))}")
+
+    session = InteractiveSession(llm, config)
+    session.run_interactive_loop()
+
+
+def _execute_desktop_actions(actions: list[dict]) -> None:
+    """Execute a list of desktop actions."""
+    try:
+        from smart_automator.desktop.executor import DesktopExecutor, DesktopAction, DesktopActionType
+
+        executor = DesktopExecutor(humanize=True)
+        if not executor.is_available():
+            console.print("[red]pyautogui not installed. Run: pip install pyautogui[/red]")
+            return
+
+        for i, act in enumerate(actions, 1):
+            try:
+                action_type = DesktopActionType(act.get("type", "wait"))
+            except ValueError:
+                console.print(f"  [{i}] [yellow]Unknown action: {act.get('type')}[/yellow]")
+                continue
+
+            desktop_action = DesktopAction(
+                action_type=action_type,
+                x=act.get("x"),
+                y=act.get("y"),
+                text=act.get("text"),
+                keys=act.get("keys"),
+                app_name=act.get("app_name"),
+                description=act.get("description", ""),
+            )
+            result = executor.execute(desktop_action)
+            status = "[green]OK[/green]" if result.success else f"[red]FAIL: {result.error}[/red]"
+            console.print(f"  [{i}] {act.get('type', 'wait')}: {status} ({result.duration_ms:.0f}ms)")
+
+            if not result.success:
+                break
+    except ImportError:
+        console.print("[red]Desktop executor unavailable.[/red]")
+
+
+@cli.command()
 def info() -> None:
     """Show framework information and capabilities."""
     console.print(Panel(
@@ -224,12 +419,19 @@ def info() -> None:
         "  1. [green]Prompt[/green] - Natural language to automation script\n"
         "  2. [green]Screenshot[/green] - Image analysis to selectors\n"
         "  3. [green]Recording[/green] - Raw recording to hardened script\n\n"
+        "[bold]Voice+Vision Assistant:[/bold]\n"
+        "  - [cyan]assist[/cyan] - Single command with screen awareness\n"
+        "  - [cyan]listen[/cyan] - Interactive voice loop (push-to-talk)\n"
+        "  - Three modes: guide (explain), do (act), ask (confirm)\n\n"
         "[bold]Key Features:[/bold]\n"
         "  - AI-powered selector generation (no POM needed)\n"
         "  - Auto API/UI strategy selection\n"
         "  - Self-healing broken selectors\n"
         "  - Human-like interaction patterns\n"
-        "  - Cron-based task scheduling",
+        "  - Desktop control (mouse, keyboard, app launch)\n"
+        "  - Visual overlay pointer\n"
+        "  - Voice input (Whisper) and output (TTS)\n"
+        "  - Continuous screen capture with change detection",
         title="About",
         border_style="blue",
     ))

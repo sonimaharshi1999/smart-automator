@@ -1,12 +1,12 @@
 {
   "project_name": "smart-automator",
-  "title": "SmartAutomator - Adaptive API/UI Automation Framework",
+  "title": "SmartAutomator - AI Voice+Vision Automation Framework",
   "category": "qa-ai-automation",
   "difficulty": "advanced",
-  "description": "Intelligent automation framework that auto-selects between API calls and UI automation. Three script generation modes: prompt-based, screenshot-based, and recording-enhanced. No POM — AI dynamically generates resilient label-based XPath selectors. Includes humanizer layer and self-healing on selector failure.",
-  "tech_stack": ["playwright", "httpx", "pydantic", "click", "rich", "pillow", "pyyaml", "jinja2", "pytest"],
-  "features": ["API/UI hybrid strategy selector", "Prompt-to-script generation", "Screenshot-to-selector generation", "Recording enhancement with AI", "Self-healing selectors", "Humanizer (Bezier mouse, Gaussian delays, realistic typing)", "Cron scheduler", "Platform registry with YAML configs"],
+  "description": "AI-powered automation framework with voice+vision assistant. Auto-selects between API and UI automation. Three script generation modes (prompt, screenshot, recording) plus interactive voice assistant with guide/do/ask modes. Features: screen capture with change detection, push-to-talk voice I/O (Whisper + TTS), transparent visual overlay pointer, desktop control via pyautogui with humanizer, self-healing selectors, and conversational AI brain. No POM needed.",
+  "tech_stack": ["playwright", "httpx", "pydantic", "click", "rich", "pillow", "pyyaml", "jinja2", "numpy", "sounddevice", "faster-whisper", "pyttsx3", "pyautogui", "mss", "pytest"],
+  "features": ["Voice+Vision AI assistant (guide/do/ask modes)", "Push-to-talk voice input with silence detection", "Text-to-speech output (pyttsx3/ElevenLabs/system)", "Continuous screen capture with change detection", "Transparent visual overlay pointer (like Clicky)", "Desktop control (mouse, keyboard, app launch)", "API/UI hybrid strategy selector", "Prompt-to-script generation", "Screenshot-to-selector generation", "Recording enhancement with AI", "Self-healing selectors", "Humanizer (Bezier mouse, Gaussian delays, realistic typing)", "Interactive session orchestrator", "Platform registry with YAML configs"],
   "test_status": "PASSED",
-  "sample_input": {"description": "Natural language automation request", "example": "smart-automator run --workflow linkedin_post.yaml --content 'Excited about my new project'"},
-  "sample_output": {"description": "Automation execution results", "example": "Strategy: UI (no API available) | Generated 5 action steps | Executed in 12.3s | Status: SUCCESS"}
+  "sample_input": {"description": "Voice or text command to the assistant", "example": "smart-automator assist 'Open Chrome and go to LinkedIn' --mode do"},
+  "sample_output": {"description": "Assistant response with actions", "example": "Mode: DO | Speech: 'Opening Chrome and navigating to LinkedIn' | Actions: open_app(chrome), navigate(linkedin.com) | Duration: 4.2s | Status: SUCCESS"}
 }

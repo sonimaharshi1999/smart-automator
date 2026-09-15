@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smart-automator"
-version = "1.0.0"
-description = "Adaptive API/UI automation framework with AI-powered selector generation and self-healing"
+version = "2.0.0"
+description = "AI-powered automation framework with voice+vision assistant, desktop control, and self-healing selectors"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Maharshi Soni"}]
@@ -32,9 +32,26 @@ dependencies = [
     "pillow>=10.0.0",
     "pyyaml>=6.0",
     "jinja2>=3.1.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
+voice = [
+    "sounddevice>=0.4.6",
+    "faster-whisper>=0.10.0",
+    "pyttsx3>=2.90",
+]
+desktop = [
+    "pyautogui>=0.9.54",
+    "mss>=9.0.0",
+]
+all = [
+    "sounddevice>=0.4.6",
+    "faster-whisper>=0.10.0",
+    "pyttsx3>=2.90",
+    "pyautogui>=0.9.54",
+    "mss>=9.0.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",

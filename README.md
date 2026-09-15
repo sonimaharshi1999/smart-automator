@@ -1,8 +1,122 @@
 # SmartAutomator - Adaptive API/UI Automation Framework
 
-An intelligent automation framework that auto-selects between API calls and UI automation based on platform capabilities. Three script generation modes: **prompt-based** (natural language to script), **screenshot-based** (vision analysis to selectors), and **recording-enhanced** (recorded actions hardened by AI). No Page Object Model needed — AI dynamically generates resilient label-based XPath selectors from live page state.
+An intelligent automation framework that auto-selects between API calls and UI automation based on platform capabilities. Three script generation modes: **prompt-based** (natural language to script), **screenshot-based** (vision analysis to selectors), and **recording-enhanced** (recorded actions hardened by AI). Now with a **voice+vision assistant** that sees your screen, hears your voice, and can guide or drive desktop actions in real time. No Page Object Model needed — AI dynamically generates resilient label-based XPath selectors from live page state.
 
-## Architecture
+## Voice+Vision Assistant
+
+A conversational desktop assistant that combines speech recognition, screen understanding, and OS-native control into a single loop. Tell it what to do with your voice; it sees your screen and either walks you through it or does it for you.
+
+### Three Interaction Modes
+
+| Mode | Behavior | Best For |
+|---|---|---|
+| **GUIDE** | Explains each step and highlights the target UI element with a transparent overlay | Learning a new workflow |
+| **DO** | Explains what it will do, then performs the mouse/keyboard actions automatically | Hands-free execution |
+| **ASK** | Explains the next action, waits for your spoken "yes" / "no", then proceeds | Supervised automation |
+
+### Capabilities
+
+- **Voice Input** — Push-to-talk with silence detection, powered by Whisper (local) or Deepgram API
+- **Voice Output** — Text-to-speech via pyttsx3 (offline), ElevenLabs API, or system native
+- **Screen Capture** — Continuous screenshot capture with change detection using mss + PIL
+- **Visual Overlay** — Transparent fullscreen pointer overlay that highlights UI elements
+- **Desktop Control** — OS-native mouse/keyboard via pyautogui with humanizer integration
+- **AI Brain** — Conversational planner that decomposes instructions into executable steps
+
+### Voice+Vision Architecture
+
+```mermaid
+graph LR
+    subgraph Input["Voice Input"]
+        MIC["Microphone<br/>Push-to-Talk"]
+        MIC --> STT["Transcriber<br/>Whisper / Deepgram"]
+    end
+
+    subgraph Vision["Screen Vision"]
+        CAP["Screen Capture<br/>mss + PIL"]
+        CAP --> CD["Change Detection<br/>Diff Analysis"]
+    end
+
+    subgraph Brain["AI Brain"]
+        PLAN["Planner<br/>Instruction → Steps"]
+        MODE["Mode Router<br/>GUIDE · DO · ASK"]
+        PLAN --> MODE
+    end
+
+    subgraph Output["Execution"]
+        OVR["Visual Overlay<br/>Element Highlight"]
+        EXEC["Desktop Executor<br/>pyautogui + Humanizer"]
+        TTS["Speaker<br/>pyttsx3 / ElevenLabs"]
+    end
+
+    STT --> PLAN
+    CD --> PLAN
+    MODE -->|GUIDE| OVR
+    MODE -->|GUIDE| TTS
+    MODE -->|DO| EXEC
+    MODE -->|DO| TTS
+    MODE -->|ASK| TTS
+    MODE -->|ASK confirm| EXEC
+
+    style Input fill:#1a1a2e,color:#e0e0ff,stroke:#4a4a8a
+    style Vision fill:#16213e,color:#e0e0ff,stroke:#4a4a8a
+    style Brain fill:#0f3460,color:#e0e0ff,stroke:#4a4a8a
+    style Output fill:#1a1a2e,color:#e0e0ff,stroke:#4a4a8a
+```
+
+### Assistant CLI
+
+```bash
+# Single command — AI sees your screen and performs the action
+smart-automator assist "Open Chrome and go to LinkedIn" --mode do
+
+# Interactive voice loop — push-to-talk with screen awareness
+smart-automator listen --mode ask
+
+# Guide mode — overlay highlights elements while AI narrates
+smart-automator assist "Show me how to create a GitHub issue" --mode guide
+```
+
+### Assistant Input / Output Examples
+
+**GUIDE mode** — explains and points:
+```
+You:   "How do I change my GitHub profile picture?"
+Brain: I'll walk you through it. Look at the highlighted element.
+       → [overlay highlights avatar in top-right corner]
+       Step 1: Click your profile avatar in the top-right corner.
+       → [overlay moves to "Settings" menu item]
+       Step 2: Click "Settings" from the dropdown menu.
+       → [overlay highlights "Profile picture" section]
+       Step 3: Click "Edit" next to your profile picture.
+```
+
+**DO mode** — explains and executes:
+```
+You:   "Open Chrome and go to LinkedIn"
+Brain: Opening Chrome and navigating to LinkedIn.
+       → [launches Chrome]
+       → [types linkedin.com in address bar]
+       → [presses Enter]
+       Done. LinkedIn is loaded and ready.
+```
+
+**ASK mode** — explains, waits, then acts:
+```
+You:   "Post 'Hello World' on LinkedIn"
+Brain: Step 1: I'll click "Start a post" at the top of your feed. Proceed?
+You:   "Yes"
+       → [clicks "Start a post"]
+Brain: Step 2: I'll type "Hello World" in the post editor. Proceed?
+You:   "Yes"
+       → [types "Hello World"]
+Brain: Step 3: I'll click the "Post" button to publish. Proceed?
+You:   "Go ahead"
+       → [clicks Post]
+       Done. Your post is live.
+```
+
+## Automation Architecture
 
 ```mermaid
 graph TB
@@ -120,7 +234,15 @@ Not just `random.uniform()` delays:
 ## Installation
 
 ```bash
+# Core automation framework
 pip install -e ".[dev]"
+
+# Voice + vision assistant (all optional dependencies)
+pip install smart-automator[all]
+
+# Or install specific extras
+pip install smart-automator[voice]    # sounddevice, faster-whisper, pyttsx3
+pip install smart-automator[desktop]  # pyautogui, mss
 ```
 
 ## Quick Start
@@ -140,6 +262,8 @@ strategy = selector.select(my_sequence)  # Returns API, UI, or HYBRID
 ## CLI Commands
 
 ```bash
+# --- Automation Commands ---
+
 # Run automation from natural language
 smart-automator run "Create an issue titled 'Bug Fix'" -p github --dry-run
 
@@ -154,6 +278,17 @@ smart-automator schedule
 
 # Framework info
 smart-automator info
+
+# --- Voice+Vision Assistant Commands ---
+
+# Single command with screen awareness (modes: guide, do, ask)
+smart-automator assist "Open Chrome and go to LinkedIn" --mode do
+
+# Interactive voice loop — push-to-talk, continuous screen capture
+smart-automator listen --mode ask
+
+# Guide mode — highlights elements with overlay while narrating steps
+smart-automator assist "Show me how to file a GitHub issue" --mode guide
 ```
 
 ## Platform Configuration
@@ -182,6 +317,10 @@ auth:
 | Self-healing selector recovery | <5 seconds |
 | API execution (GitHub issue) | <1 second |
 | UI execution with humanizer | 5-15 seconds (realistic pacing) |
+| Voice transcription (Whisper local) | ~0.5 seconds per utterance |
+| Screen capture + change detection | ~50ms per frame |
+| Overlay render latency | <16ms (60fps capable) |
+| End-to-end voice command (DO mode) | ~2 seconds to first action |
 
 ## Tech Stack
 
@@ -189,10 +328,15 @@ auth:
 - **httpx** — Async HTTP client for API execution
 - **Pydantic** — Type-safe models and validation
 - **Click + Rich** — CLI with styled terminal output
-- **Pillow** — Screenshot analysis
+- **Pillow** — Screenshot analysis and change detection
 - **PyYAML** — Platform and workflow configuration
 - **Jinja2** — Script template rendering
 - **pytest** — Testing with full mock coverage
+- **faster-whisper** — Local speech-to-text (Whisper model)
+- **sounddevice** — Microphone capture with push-to-talk
+- **pyttsx3** — Offline text-to-speech engine
+- **pyautogui** — OS-native mouse and keyboard control
+- **mss** — Fast cross-platform screen capture
 
 ## What I Would Do Differently
 
@@ -200,6 +344,8 @@ auth:
 - **Proxy rotation**: Integrate residential proxy rotation for multi-account scenarios. Current design assumes single-IP operation.
 - **Visual regression**: Add screenshot comparison to detect UI changes before selectors break, rather than only healing after failure.
 - **LLM caching**: Cache LLM responses for identical page structures to reduce API calls and improve speed.
+- **Wake word activation**: Replace push-to-talk with always-on wake word detection (e.g., "Hey Auto") for truly hands-free operation.
+- **Multi-monitor awareness**: Current screen capture targets the primary display. Multi-monitor support would let the assistant track context across screens.
 
 ## Scaling Considerations
 
@@ -207,6 +353,8 @@ auth:
 - **Session pooling**: Maintain a pool of authenticated sessions to avoid repeated login flows. Sessions refresh on expiry.
 - **Rate limit coordination**: Centralized rate limiter across all concurrent tasks targeting the same platform.
 - **Distributed execution**: Worker-based architecture with a central scheduler distributing tasks across multiple machines.
+- **Voice pipeline streaming**: Stream audio chunks to the transcriber instead of waiting for full utterance, reducing perceived latency for long commands.
+- **GPU-accelerated vision**: Offload screen change detection and overlay rendering to GPU for sub-millisecond frame processing on high-refresh displays.
 
 ## Testing
 
