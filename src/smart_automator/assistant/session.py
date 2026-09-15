@@ -9,8 +9,6 @@ and the AI brain into a single interactive loop.
 
 from __future__ import annotations
 
-import tempfile
-import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -186,7 +184,17 @@ class InteractiveSession:
         return response
 
     def _handle_response(self, response: AssistantResponse) -> None:
-        """Execute the full response: speak + point + act."""
+        """Execute the full response: interleave speech with pointer movement.
+
+        Parses inline [POINT:x,y:label] tags from the speech text so the buddy
+        cursor moves mid-sentence (like Clicky), instead of waiting for the
+        full response before pointing.
+        """
+        from smart_automator.assistant.streaming import (
+            parse_response_stream, StreamEventType, strip_tags,
+        )
+
+        # JSON-level pointers (backward compat): move buddy before speaking
         if response.pointers and self._overlay:
             for ptr in response.pointers:
                 self._overlay.point_at(
@@ -196,7 +204,14 @@ class InteractiveSession:
                     duration_s=2.0,
                 )
 
-        self._speak(response.speech_text)
+        # Parse inline POINT tags from speech for mid-speech buddy movement
+        events = parse_response_stream(response.speech_text)
+        has_inline_points = any(e.event_type == StreamEventType.POINT for e in events)
+
+        if has_inline_points:
+            self._speak_with_points(events)
+        else:
+            self._speak(response.speech_text)
 
         if response.needs_confirmation:
             self._set_state(SessionState.CONFIRMING)
@@ -206,12 +221,37 @@ class InteractiveSession:
             self._set_state(SessionState.ACTING)
             self._execute_actions(response.actions)
 
+    def _speak_with_points(self, events: list) -> None:
+        """Interleave speech segments with buddy cursor movement.
+
+        For each speech chunk, speak it. For each POINT tag, move the
+        buddy cursor. This creates the Clicky-like experience where
+        the cursor points at elements while the AI talks.
+        """
+        from smart_automator.assistant.streaming import StreamEventType
+
+        if not self._config.voice_enabled and not self._overlay:
+            return
+
+        self._set_state(SessionState.SPEAKING)
+
+        for event in events:
+            if event.event_type == StreamEventType.SPEECH and event.text:
+                if self._config.voice_enabled:
+                    self._speaker.speak(event.text, blocking=True)
+            elif event.event_type == StreamEventType.POINT and self._overlay:
+                self._overlay.point_at(event.x, event.y, label=event.label, duration_s=2.5)
+                time.sleep(0.4)
+            elif event.event_type == StreamEventType.END:
+                break
+
     def _speak(self, text: str) -> None:
-        """Speak text if voice is enabled."""
+        """Speak text if voice is enabled. Strips any remaining POINT tags."""
         if not text or not self._config.voice_enabled:
             return
+        from smart_automator.assistant.streaming import strip_tags
         self._set_state(SessionState.SPEAKING)
-        self._speaker.speak(text, blocking=True)
+        self._speaker.speak(strip_tags(text), blocking=True)
 
     def _execute_actions(self, actions: list[dict[str, Any]]) -> None:
         """Convert brain actions to DesktopActions and execute."""

@@ -324,10 +324,11 @@ class TestVisualOverlay:
         overlay._clear()  # Should not raise
         assert overlay._items == []
 
-    def test_draw_pointer_no_canvas_is_noop(self) -> None:
+    def test_buddy_point_no_canvas_is_noop(self) -> None:
         overlay = VisualOverlay()
         overlay._canvas = None
-        overlay._draw_pointer(100, 200, "test", 1.0)  # Should not raise
+        overlay._buddy = None
+        overlay._buddy_point(100, 200, "test", 1.0)  # Should not raise
 
     def test_draw_highlight_no_canvas_is_noop(self) -> None:
         overlay = VisualOverlay()

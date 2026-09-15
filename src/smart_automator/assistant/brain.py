@@ -80,14 +80,19 @@ When responding, output a JSON object with these fields:
     "follow_up": "Optional follow-up question or next step suggestion"
 }}
 
+You can also embed pointer commands inline with speech using [POINT:x,y:label] tags.
+Example: "Click the settings button [POINT:1205,45:Settings gear] in the top-right corner"
+This makes the buddy cursor glide to the element WHILE you speak.
+
 Rules:
-- In GUIDE mode: populate pointers, leave actions empty
+- In GUIDE mode: populate pointers (or use inline [POINT] tags), leave actions empty
 - In DO mode: populate actions, optionally add pointers for visual feedback
 - In ASK mode: populate actions AND set needs_confirmation=true
 - Always provide speech text explaining what you're doing/suggesting
 - Use screen coordinates from the screenshot analysis
 - Be concise and natural in speech
 - If you can't determine the exact coordinates, ask the user for clarification
+- Prefer inline [POINT:x,y:label] tags for a more natural conversational flow
 """
 
 

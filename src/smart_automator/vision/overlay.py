@@ -1,37 +1,196 @@
 # SmartAutomator - Adaptive API/UI Automation Framework
 # Author: Maharshi Soni | License: MIT
 
-"""Visual overlay for pointing at screen elements (like Clicky's pointer)."""
+"""Visual overlay with animated buddy cursor (like Clicky's pointer)."""
 
 from __future__ import annotations
 
+import math
 import platform
 import threading
 import time
 from dataclasses import dataclass
 from typing import Any
 
+from smart_automator.humanizer.mouse import HumanMouse
+
 
 @dataclass
 class PointerStyle:
     """Visual pointer appearance."""
     color: str = "#FF4444"
+    buddy_color: str = "#00AAFF"
     ring_radius: int = 30
     ring_width: int = 3
-    arrow_size: int = 20
+    arrow_size: int = 24
     label_font_size: int = 14
     label_bg_color: str = "#222222"
     label_text_color: str = "#FFFFFF"
     animation_duration_ms: int = 300
     pulse_enabled: bool = True
+    buddy_trail_length: int = 5
+    buddy_glow: bool = True
+
+
+class BuddyCursor:
+    """Animated companion cursor that glides independently from the real mouse.
+
+    Moves along Bezier paths to target coordinates while the AI speaks,
+    creating the signature Clicky-like pointing experience.
+    """
+
+    def __init__(self, canvas: Any, style: PointerStyle) -> None:
+        self._canvas = canvas
+        self._style = style
+        self._x = 0.0
+        self._y = 0.0
+        self._target_x = 0.0
+        self._target_y = 0.0
+        self._items: list[int] = []
+        self._trail: list[tuple[float, float]] = []
+        self._mouse = HumanMouse(steps=30, jitter_px=1.0, overshoot_probability=0.1)
+        self._animating = False
+        self._visible = False
+
+    @property
+    def position(self) -> tuple[float, float]:
+        return (self._x, self._y)
+
+    @property
+    def is_animating(self) -> bool:
+        return self._animating
+
+    def show(self, x: float, y: float) -> None:
+        """Show buddy cursor at position instantly."""
+        self._x = x
+        self._y = y
+        self._visible = True
+        self._draw()
+
+    def hide(self) -> None:
+        """Hide the buddy cursor."""
+        self._visible = False
+        self._clear()
+
+    def move_to(
+        self,
+        target_x: float,
+        target_y: float,
+        on_arrive: Any = None,
+    ) -> None:
+        """Animate buddy cursor to target using Bezier path."""
+        if not self._canvas:
+            return
+
+        self._target_x = target_x
+        self._target_y = target_y
+        self._visible = True
+
+        path = self._mouse.generate_path(self._x, self._y, target_x, target_y)
+        timings = self._mouse.generate_timing(len(path))
+        self._animating = True
+        self._animate_along_path(path, timings, 0, on_arrive)
+
+    def _animate_along_path(
+        self,
+        path: list[tuple[float, float]],
+        timings: list[int],
+        idx: int,
+        on_arrive: Any,
+    ) -> None:
+        """Step through the Bezier path one frame at a time."""
+        if not self._canvas or idx >= len(path):
+            self._animating = False
+            if on_arrive:
+                on_arrive()
+            return
+
+        px, py = path[idx]
+        self._trail.append((self._x, self._y))
+        if len(self._trail) > self._style.buddy_trail_length:
+            self._trail.pop(0)
+
+        self._x = px
+        self._y = py
+        self._draw()
+
+        delay = max(5, timings[idx] if idx < len(timings) else 15)
+        self._canvas.after(delay, lambda: self._animate_along_path(path, timings, idx + 1, on_arrive))
+
+    def _draw(self) -> None:
+        """Draw the buddy cursor sprite at current position."""
+        if not self._canvas or not self._visible:
+            return
+
+        self._clear()
+        x, y = self._x, self._y
+        color = self._style.buddy_color
+        size = self._style.arrow_size
+
+        # Trail (fading dots behind cursor)
+        for i, (tx, ty) in enumerate(self._trail):
+            alpha_ratio = (i + 1) / (len(self._trail) + 1)
+            r = max(2, int(4 * alpha_ratio))
+            trail_dot = self._canvas.create_oval(
+                tx - r, ty - r, tx + r, ty + r,
+                fill=color, outline="",
+            )
+            self._items.append(trail_dot)
+
+        # Glow circle behind cursor
+        if self._style.buddy_glow:
+            glow_r = size + 6
+            glow = self._canvas.create_oval(
+                x - glow_r, y - glow_r, x + glow_r, y + glow_r,
+                outline=color, width=1,
+            )
+            self._items.append(glow)
+
+        # Arrow pointer (triangle pointing down-left, like a cursor)
+        tip_x, tip_y = x, y
+        wing1_x = x + size * 0.7
+        wing1_y = y - size * 0.9
+        wing2_x = x + size * 0.15
+        wing2_y = y - size * 0.55
+        wing3_x = x + size * 0.9
+        wing3_y = y - size * 0.55
+
+        # Main arrow body
+        arrow = self._canvas.create_polygon(
+            tip_x, tip_y,
+            wing1_x, wing1_y,
+            wing2_x, wing2_y,
+            fill=color, outline="white", width=2,
+        )
+        self._items.append(arrow)
+
+        # Small dot at tip for precision
+        dot = self._canvas.create_oval(
+            x - 3, y - 3, x + 3, y + 3,
+            fill="white", outline="",
+        )
+        self._items.append(dot)
+
+    def _clear(self) -> None:
+        """Remove all buddy cursor canvas items."""
+        if self._canvas:
+            for item in self._items:
+                try:
+                    self._canvas.delete(item)
+                except Exception:
+                    pass
+        self._items.clear()
 
 
 class VisualOverlay:
-    """Transparent fullscreen overlay that points at UI elements.
+    """Transparent fullscreen overlay with animated buddy cursor.
 
     Creates an always-on-top transparent window using tkinter.
-    Renders animated pointers, labels, and highlight rings on
-    target screen coordinates.
+    Features:
+    - Animated buddy cursor that glides via Bezier paths (like Clicky)
+    - Pulsing target rings at destination
+    - Floating labels next to targets
+    - Region highlighting
     """
 
     def __init__(self, style: PointerStyle | None = None) -> None:
@@ -43,10 +202,15 @@ class VisualOverlay:
         self._items: list[int] = []
         self._pending_actions: list[tuple] = []
         self._lock = threading.Lock()
+        self._buddy: BuddyCursor | None = None
 
     @property
     def is_active(self) -> bool:
         return self._running
+
+    @property
+    def buddy(self) -> BuddyCursor | None:
+        return self._buddy
 
     def start(self) -> None:
         """Start the overlay window in a background thread."""
@@ -94,6 +258,8 @@ class VisualOverlay:
             )
             self._canvas.pack()
 
+            self._buddy = BuddyCursor(self._canvas, self._style)
+
             self._root.bind("<Escape>", lambda e: self.stop())
 
             self._poll_actions()
@@ -121,16 +287,31 @@ class VisualOverlay:
             self._root.after(50, self._poll_actions)
 
     def point_at(self, x: int, y: int, label: str = "", duration_s: float = 3.0) -> None:
-        """Point at a screen coordinate with an animated ring and optional label."""
+        """Animate buddy cursor to target, then draw ring and label."""
         with self._lock:
-            self._pending_actions.append((self._draw_pointer, x, y, label, duration_s))
+            self._pending_actions.append((self._buddy_point, x, y, label, duration_s))
 
-    def _draw_pointer(self, x: int, y: int, label: str, duration_s: float) -> None:
-        """Draw a pointer ring and label at coordinates."""
+    def _buddy_point(self, x: int, y: int, label: str, duration_s: float) -> None:
+        """Move buddy cursor to target, draw ring on arrival."""
+        if not self._canvas or not self._buddy:
+            return
+
+        if not self._buddy._visible:
+            # First point — start from top-right corner
+            screen_w = self._root.winfo_screenwidth() if self._root else 1920
+            self._buddy.show(screen_w * 0.8, 100)
+
+        def on_arrive() -> None:
+            self._draw_target_ring(x, y, label, duration_s)
+
+        self._buddy.move_to(float(x), float(y), on_arrive=on_arrive)
+
+    def _draw_target_ring(self, x: int, y: int, label: str, duration_s: float) -> None:
+        """Draw pulsing ring and label at the target location."""
         if not self._canvas:
             return
 
-        self._clear()
+        self._clear_rings()
         r = self._style.ring_radius
 
         ring = self._canvas.create_oval(
@@ -139,16 +320,6 @@ class VisualOverlay:
             width=self._style.ring_width,
         )
         self._items.append(ring)
-
-        crosshair_v = self._canvas.create_line(
-            x, y - r // 2, x, y + r // 2,
-            fill=self._style.color, width=2,
-        )
-        crosshair_h = self._canvas.create_line(
-            x - r // 2, y, x + r // 2, y,
-            fill=self._style.color, width=2,
-        )
-        self._items.extend([crosshair_v, crosshair_h])
 
         if label:
             label_x = x + r + 10
@@ -171,7 +342,7 @@ class VisualOverlay:
             self._animate_pulse(x, y, r, 0)
 
         if duration_s > 0:
-            self._root.after(int(duration_s * 1000), self._clear)
+            self._root.after(int(duration_s * 1000), self._clear_rings)
 
     def _animate_pulse(self, x: int, y: int, base_r: int, step: int) -> None:
         """Animate a pulsing ring effect."""
@@ -215,7 +386,7 @@ class VisualOverlay:
         if not self._canvas:
             return
 
-        self._clear()
+        self._clear_rings()
         rect = self._canvas.create_rectangle(
             x, y, x + w, y + h,
             outline=self._style.color, width=2, dash=(5, 3),
@@ -232,10 +403,10 @@ class VisualOverlay:
             self._items.append(txt)
 
         if duration_s > 0:
-            self._root.after(int(duration_s * 1000), self._clear)
+            self._root.after(int(duration_s * 1000), self._clear_rings)
 
-    def _clear(self) -> None:
-        """Clear all overlay items."""
+    def _clear_rings(self) -> None:
+        """Clear ring/highlight items (not the buddy cursor)."""
         if self._canvas:
             for item in self._items:
                 try:
@@ -244,9 +415,17 @@ class VisualOverlay:
                     pass
         self._items.clear()
 
+    def _clear(self) -> None:
+        """Clear all overlay items including buddy cursor."""
+        self._clear_rings()
+        if self._buddy:
+            self._buddy.hide()
+
     def stop(self) -> None:
         """Close the overlay window."""
         self._running = False
+        if self._buddy:
+            self._buddy.hide()
         if self._root:
             try:
                 self._root.destroy()
@@ -254,3 +433,4 @@ class VisualOverlay:
                 pass
         self._root = None
         self._canvas = None
+        self._buddy = None
